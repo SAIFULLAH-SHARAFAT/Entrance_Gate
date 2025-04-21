@@ -18,3 +18,34 @@ A short RFID scanner and an IR-directed entrance gate program and its descriptio
 | **Exit Side IR Sequence**                         | Gate closes if Exit IR is not triggered after the scan           | If the Exit IR is not triggered (indicating the user did not pass fully through the gate), the system will close the gate to ensure security. |
 | **Timeout After Scan**                            | Gate closes after timeout if user doesn't pass completely        | If the user scans their card but does not pass through the gate within a certain time frame, the gate will close after the timeout to prevent it from staying open unnecessarily. |
 
+
+flowchart TD
+    A[Start] --> B[Card Scanned at Entry or Exit]
+    B --> C{Check Card Scan}
+    C -->|Entry Side| D[Check Exit IR is HIGH]
+    D -->|True| E[Open Gate for Entry]
+    E --> F[Gate Opened for 5 Seconds]
+    F --> G[Close Gate]
+    G --> H{No Movement for 60 Seconds}
+    H -->|Timeout| I[Close Gate]
+    C -->|Exit Side| J[Check Entry IR is HIGH]
+    J -->|True| K[Open Gate for Exit]
+    K --> F
+    C -->|Invalid Card Scan| L[Gate Does Not Open]
+    D -->|False| L
+    J -->|False| L
+    L --> M[Log Invalid Entry/Exit]
+
+    %% Additional logic
+    F --> N[Detect Tailgating - Multiple IR Signals]
+    N -->|Detected| O[Close Gate]
+    O --> P[Log Tailgating Event]
+    N -->|Not Detected| H
+
+    %% Anomalies and Obstruction Detection
+    B --> Q[Detect Hesitation/Obstruction]
+    Q -->|Detected| R[Log Anomaly and Close Gate]
+    R --> M
+
+    %% Edge cases
+    H --> S[Log Timeout and Close Gate]
