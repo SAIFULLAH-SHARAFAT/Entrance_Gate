@@ -19,6 +19,11 @@ A short RFID scanner and an IR-directed entrance gate program and its descriptio
 | **Timeout After Scan**                            | Gate closes after timeout if user doesn't pass completely        | If the user scans their card but does not pass through the gate within a certain time frame, the gate will close after the timeout to prevent it from staying open unnecessarily. |
 
 
+
+
+# Flowchart for Gate Entry/Exit System
+
+```mermaid
 flowchart TD
     A[Start] --> B[Card Scanned at Entry or Exit]
     B --> C{Check Card Scan}
@@ -49,3 +54,4 @@ flowchart TD
 
     %% Edge cases
     H --> S[Log Timeout and Close Gate]
+
