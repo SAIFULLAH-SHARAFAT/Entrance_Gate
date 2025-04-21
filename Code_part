@@ -6,7 +6,7 @@
 #define RDM6300_RX_PIN_EXIT 14
 #define IR_SENSOR_ENTER 18
 #define IR_SENSOR_EXIT 19
-#define GATE_RELAY_PIN 21  // Assuming you are controlling a relay to open/close the gate
+#define GATE_RELAY_PIN 21  // Assuming gate 
 
 // === RDM6300 RFID READER ===
 Rdm6300 enter_card;  // RFID reader for entry side
