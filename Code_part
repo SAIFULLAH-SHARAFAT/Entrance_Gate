@@ -1,0 +1,156 @@
+#include <Arduino.h>
+#include <rdm6300.h>
+
+// === PIN DEFINITIONS ===
+#define RDM6300_RX_PIN_ENTER 5
+#define RDM6300_RX_PIN_EXIT 14
+#define IR_SENSOR_ENTER 18
+#define IR_SENSOR_EXIT 19
+#define GATE_RELAY_PIN 21  // Assuming you are controlling a relay to open/close the gate
+
+// === RDM6300 RFID READER ===
+Rdm6300 enter_card;  // RFID reader for entry side
+Rdm6300 exit_card;   // RFID reader for exit side
+
+// === VARIABLES ===
+long lastScanTimeEnter = 0;
+long lastScanTimeExit = 0;
+bool gateOpen = false;
+unsigned long lastMovementTime = 0; // Track last movement time for timeout
+unsigned long timeoutDuration = 60000; // 60 seconds timeout
+
+// === Setup ===
+void setup() {
+  // Start Serial Communication
+  Serial.begin(9600);
+
+  // Initialize RDM6300 RFID readers
+  enter_card.begin(RDM6300_RX_PIN_ENTER, 1);  // Initialize entry RFID reader
+  exit_card.begin(RDM6300_RX_PIN_EXIT, 2);    // Initialize exit RFID reader
+
+  // Initialize IR sensor pins as inputs
+  pinMode(IR_SENSOR_ENTER, INPUT);
+  pinMode(IR_SENSOR_EXIT, INPUT);
+  
+  // Initialize Gate Relay Pin as output
+  pinMode(GATE_RELAY_PIN, OUTPUT);
+  digitalWrite(GATE_RELAY_PIN, LOW); // Initially keep the gate closed
+}
+
+// === Loop ===
+void loop() {
+  // Read card data for entry and exit RFID scanners
+  if (enter_card.available()) {
+    String cardIdEnter = readCard(enter_card);  // Read the card ID in decimal
+    Serial.println("Card scanned at entrance: " + cardIdEnter);
+
+    // Handle card scan at entry
+    handleEntryScan(cardIdEnter);
+  }
+
+  if (exit_card.available()) {
+    String cardIdExit = readCard(exit_card);  // Read the card ID in decimal
+    Serial.println("Card scanned at exit: " + cardIdExit);
+
+    // Handle card scan at exit
+    handleExitScan(cardIdExit);
+  }
+
+  // Check if there is any movement detected at entry or exit IR sensors
+  int irStatusEnter = digitalRead(IR_SENSOR_ENTER);
+  int irStatusExit = digitalRead(IR_SENSOR_EXIT);
+
+  // Handle gate logic based on IR sensor status
+  if (irStatusEnter == LOW) {
+    // A person is at the entry IR sensor, check for tailgating or blockage
+    Serial.println("Person detected at entry.");
+    if (!gateOpen) {
+      openGate();
+    }
+  }
+
+  if (irStatusExit == LOW) {
+    // A person is at the exit IR sensor, check for tailgating or blockage
+    Serial.println("Person detected at exit.");
+    if (!gateOpen) {
+      openGate();
+    }
+  }
+
+  // Handle gate timeout for no movement (if gate stays open too long)
+  checkGateTimeout();
+}
+
+// === Functions ===
+
+// Function to handle entry card scan
+void handleEntryScan(String cardId) {
+  long currentTime = millis();
+
+  if (currentTime - lastScanTimeEnter > 1000) { // Prevent multiple scans too quickly
+    lastScanTimeEnter = currentTime;
+
+    // Logic to check if the gate should open based on valid card
+    if (digitalRead(IR_SENSOR_EXIT) == HIGH) { // If no one is exiting
+      openGate(); // Open gate for entry
+    }
+  }
+}
+
+// Function to handle exit card scan
+void handleExitScan(String cardId) {
+  long currentTime = millis();
+
+  if (currentTime - lastScanTimeExit > 1000) { // Prevent multiple scans too quickly
+    lastScanTimeExit = currentTime;
+
+    // Logic to check if the gate should open based on valid exit card
+    if (digitalRead(IR_SENSOR_ENTER) == HIGH) { // If no one is entering
+      openGate(); // Open gate for exit
+    }
+  }
+}
+
+// Function to read card and convert to decimal format with leading zeros
+String readCard(Rdm6300 &reader) {
+  String cardId = reader.read();
+  
+  // Convert from Hexadecimal to Decimal and ensure 10 digits with leading zero
+  unsigned long decimalCardId = strtoul(cardId.c_str(), NULL, 16);
+  String decimalCardIdStr = String(decimalCardId);
+  
+  // Add leading zeros if necessary
+  while (decimalCardIdStr.length() < 10) {
+    decimalCardIdStr = "0" + decimalCardIdStr;
+  }
+  
+  return decimalCardIdStr;  // Return the card ID in decimal format with leading zeros
+}
+
+// Function to open the gate
+void openGate() {
+  Serial.println("Opening the gate.");
+  digitalWrite(GATE_RELAY_PIN, HIGH); // Activate relay to open gate
+  gateOpen = true;
+  lastMovementTime = millis(); // Reset timeout counter
+  delay(5000); // Keep the gate open for 5 seconds (can adjust based on needs)
+  closeGate();
+}
+
+// Function to close the gate
+void closeGate() {
+  Serial.println("Closing the gate.");
+  digitalWrite(GATE_RELAY_PIN, LOW); // Deactivate relay to close gate
+  gateOpen = false;
+}
+
+// Function to check for gate timeout (if no movement detected for 60 seconds)
+void checkGateTimeout() {
+  // Check if no movement detected for 60 seconds
+  if (millis() - lastMovementTime > timeoutDuration) { // 60 seconds timeout
+    if (gateOpen) {
+      Serial.println("Timeout: Closing the gate due to no movement.");
+      closeGate(); // Close gate after timeout
+    }
+  }
+}
