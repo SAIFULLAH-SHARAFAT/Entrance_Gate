@@ -30,9 +30,10 @@ flowchart TD
     C -->|Entry Side| D[Check Exit IR is HIGH]
     D -->|True| E[Open Gate for Entry]
     E --> F[Gate Opened for 5 Seconds]
-    F --> G[Close Gate]
+    F --> G[No Movement Detected]
     G --> H{No Movement for 60 Seconds}
     H -->|Timeout| I[Close Gate]
+    G --> I[Close Gate if No Movement Detected]
     C -->|Exit Side| J[Check Entry IR is HIGH]
     J -->|True| K[Open Gate for Exit]
     K --> F
@@ -45,7 +46,7 @@ flowchart TD
     F --> N[Detect Tailgating - Multiple IR Signals]
     N -->|Detected| O[Close Gate]
     O --> P[Log Tailgating Event]
-    N -->|Not Detected| H
+    N -->|Not Detected| G
 
     %% Anomalies and Obstruction Detection
     B --> Q[Detect Hesitation/Obstruction]
@@ -54,4 +55,5 @@ flowchart TD
 
     %% Edge cases
     H --> S[Log Timeout and Close Gate]
+
 
