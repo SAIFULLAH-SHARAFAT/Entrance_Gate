@@ -1,5 +1,5 @@
 # Entrance_Gate
-A short RFID scanner and an IR-directed entrance gate program and its description.
+A short RFID scanner and an IR-directed entrance gate program, and its description.
 
 # RFID Gate Control System Logic Table (Final Updated)
 
