@@ -6,7 +6,7 @@
 #define RDM6300_RX_PIN_EXIT 14
 #define IR_SENSOR_ENTER 18
 #define IR_SENSOR_EXIT 19
-#define GATE_RELAY_PIN 21  // Assuming gate 
+#define GATE_RELAY_PIN 21  // Assuming you are controlling a relay to open/close the gate
 
 // === RDM6300 RFID READER ===
 Rdm6300 enter_card;  // RFID reader for entry side
@@ -18,6 +18,7 @@ long lastScanTimeExit = 0;
 bool gateOpen = false;
 unsigned long lastMovementTime = 0; // Track last movement time for timeout
 unsigned long timeoutDuration = 60000; // 60 seconds timeout
+unsigned long gateOpenStartTime = 0; // Track gate open start time for non-blocking logic
 
 // === Setup ===
 void setup() {
@@ -132,9 +133,7 @@ void openGate() {
   Serial.println("Opening the gate.");
   digitalWrite(GATE_RELAY_PIN, HIGH); // Activate relay to open gate
   gateOpen = true;
-  lastMovementTime = millis(); // Reset timeout counter
-  delay(5000); // Keep the gate open for 5 seconds (can adjust based on needs)
-  closeGate();
+  gateOpenStartTime = millis(); // Record the time when gate was opened
 }
 
 // Function to close the gate
@@ -152,5 +151,10 @@ void checkGateTimeout() {
       Serial.println("Timeout: Closing the gate due to no movement.");
       closeGate(); // Close gate after timeout
     }
+  }
+
+  // Non-blocking gate open time (after card scan)
+  if (gateOpen && millis() - gateOpenStartTime >= 5000) {
+    closeGate(); // Close gate after 5 seconds
   }
 }
